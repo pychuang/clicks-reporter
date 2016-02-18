@@ -39,16 +39,16 @@ def generate_site_query_id(self, query):
 def process_line(line):
     m = re.search('GET (.*) HTTP', line)
     if not m:
-        return
+        return None
     url = m.group(1)
     pr = urlparse.urlparse(url)
     qs = pr.query
     if not qs:
-        return
+        return None
     query = urlparse.parse_qs(qs)
     if 'osm' not in query:
-        return
-    print query
+        return None
+    return query
 
 
 def process_log_file(date, log_file_path):
@@ -57,12 +57,17 @@ def process_log_file(date, log_file_path):
     f = subprocess.Popen(['tail', '-F', log_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p = select.poll()
     p.register(f.stdout)
+    timeout = 1 * 1000
 
     while True:
-        if not p.poll(10 * 1000) and date != datetime.date.today():
+        if not p.poll(timeout) and date != datetime.date.today():
             break
         line = f.stdout.readline()
-        process_line(line)
+        query = process_line(line)
+        if not query:
+            continue
+        print query
+    f.kill()
 
 
 def process(logdir, date):

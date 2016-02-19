@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import collections
 import datetime
 import hashlib
 import json
@@ -24,7 +25,7 @@ urls = (
 )
 
 
-def cleanup(self, query):
+def cleanup(query):
     s = urllib.unquote_plus(query)
     s = ' '.join(s.split(','))
     s = ' '.join(s.split())
@@ -32,23 +33,88 @@ def cleanup(self, query):
     return s
 
 
-def generate_site_query_id(self, query):
+def generate_site_query_id(query):
     return hashlib.sha1(query).hexdigest()
 
+def convert_feedback_format(feedback):
+    os_feedback = {}
+    os_feedback['sid'] = feedback['sid']
+    os_feedback['site_qid'] = feedback['site_qid']
+    os_feedback['doclist'] = []
+    doclist = os_feedback['doclist']
+    docs = feedback['docs']
+    for ranking, doc in docs.iteritems():
+        d = {
+            'site_docid': doc['doi'],
+            'team': doc['team'],
+        }
+        if 'clicked' in doc and doc['clicked'] == True:
+            d['clicked'] = True
+        doclist.append(d)
+    return os_feedback
 
-def process_line(line):
+def report_feedback(feedback):
+    os_feedback = convert_feedback_format(feedback)
+    print os_feedback
+
+def process_line(feedbacks, line):
     m = re.search('GET (.*) HTTP', line)
     if not m:
-        return None
+        return
     url = m.group(1)
     pr = urlparse.urlparse(url)
     qs = pr.query
     if not qs:
-        return None
+        return
     query = urlparse.parse_qs(qs)
     if 'osm' not in query:
-        return None
-    return query
+        return
+    if 'q' not in query:
+        return
+    if 'ossid' not in query:
+        return
+    if 'rank' not in query:
+        return
+#    print 'QUERY', query
+    ossid = query['ossid'][0]
+    if ossid not in feedbacks:
+        q = query['q'][0]
+        q = cleanup(q)
+        qid = generate_site_query_id(q)
+
+        feedbacks[ossid] = {
+            'sid': ossid,
+            'site_qid': qid,
+            'docs': collections.OrderedDict(),
+        }
+
+    feedback = feedbacks[ossid]
+    docs = feedback['docs']
+
+    markers = query['osm'][0].split(',')
+    for marker in markers:
+        if not marker:
+            continue
+        (r, doi, t) = marker.split(':')
+        if t == 'p':
+            team = 'participant'
+        else:
+            team = 'site'
+        ranking  = int(r)
+        if ranking not in docs:
+            docs[ranking] = {
+                'doi': doi,
+                'team': team,
+            }
+
+    rank = query['rank'][0]
+    rank = int(rank)
+    if rank not in docs:
+        print 'ERROR: rank', rank, 'is not in', docs
+        return
+    docs[rank]['clicked'] = True
+
+    report_feedback(feedback)
 
 
 def process_log_file(date, log_file_path):
@@ -59,14 +125,13 @@ def process_log_file(date, log_file_path):
     p.register(f.stdout)
     timeout = 1 * 1000
 
+    feedbacks = {}
     while True:
         if not p.poll(timeout) and date != datetime.date.today():
             break
         line = f.stdout.readline()
-        query = process_line(line)
-        if not query:
-            continue
-        print query
+        process_line(feedbacks, line)
+
     f.kill()
 
 

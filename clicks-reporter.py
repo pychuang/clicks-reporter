@@ -37,10 +37,11 @@ def generate_site_query_id(self, query):
 
 
 def process_line(line):
-    m = re.search('GET (.*) HTTP', line)
+    m = re.search('\[(.*)\].*GET (.*) HTTP', line)
     if not m:
         return None
-    url = m.group(1)
+    time = m.group(1)
+    url = m.group(2)
     pr = urlparse.urlparse(url)
     qs = pr.query
     if not qs:
@@ -48,7 +49,8 @@ def process_line(line):
     query = urlparse.parse_qs(qs)
     if 'osm' not in query:
         return None
-    return query
+    time = datetime.datetime.strptime(time[:-6], '%d/%b/%Y:%H:%M:%S')
+    return query, time
 
 
 def process_log_file(date, log_file_path):

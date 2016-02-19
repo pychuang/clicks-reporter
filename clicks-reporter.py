@@ -54,7 +54,7 @@ def process_line(line):
 def process_log_file(date, log_file_path):
     print log_file_path
 
-    f = subprocess.Popen(['tail', '-F', log_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    f = subprocess.Popen(['tail', '-F', '-n', '+0', log_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p = select.poll()
     p.register(f.stdout)
     timeout = 1 * 1000

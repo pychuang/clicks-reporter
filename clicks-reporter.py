@@ -46,8 +46,9 @@ def convert_feedback_format(feedback):
     for ranking, doc in docs.iteritems():
         d = {
             'site_docid': doc['doi'],
-            'team': doc['team'],
         }
+        if 'team' in doc:
+            d['team'] = doc['team']
         if 'clicked' in doc and doc['clicked'] == True:
             d['clicked'] = True
         doclist.append(d)
@@ -96,16 +97,17 @@ def process_line(feedbacks, line):
         if not marker:
             continue
         (r, doi, t) = marker.split(':')
-        if t == 'p':
-            team = 'participant'
-        else:
-            team = 'site'
         ranking  = int(r)
         if ranking not in docs:
-            docs[ranking] = {
+            doc = {
                 'doi': doi,
-                'team': team,
             }
+            if t == 'p':
+                doc['team'] = 'participant'
+            elif t == 's':
+                doc['team'] = 'site'
+
+            docs[ranking] = doc
 
     rank = query['rank'][0]
     rank = int(rank)

@@ -8,6 +8,7 @@ import json
 import os
 import random
 import re
+import requests
 import select
 import subprocess
 import time
@@ -17,8 +18,6 @@ import urllib2
 import urlparse
 import web
 
-#SOLR_URL='http://localhost:9000/solr/citeseerx/select'
-SOLR_URL='http://csxindex03.ist.psu.edu:8080/solr/citeseerx/select'
 OPENSEARCH_URL='http://localhost:5000'
 
 urls = (
@@ -38,7 +37,9 @@ def generate_site_query_id(query):
     return hashlib.sha1(query).hexdigest()
 
 def convert_feedback_format(feedback):
-    os_feedback = {}
+    os_feedback = {
+        'type': 'tdi',
+    }
     os_feedback['sid'] = feedback['sid']
     os_feedback['site_qid'] = feedback['site_qid']
     os_feedback['doclist'] = []
@@ -55,11 +56,19 @@ def convert_feedback_format(feedback):
         doclist.append(d)
     return os_feedback
 
-def report_feedback(feedback):
-    os_feedback = convert_feedback_format(feedback)
-    print os_feedback
+def report_feedback(key, feedback):
+    sid = feedback['sid']
+    data = convert_feedback_format(feedback)
+    # PUT /api/site/feedback/(key)/(sid)
+    url = '/'.join([OPENSEARCH_URL, 'api/site/feedback', key, sid])
+    print "URL: %s" % url
+    data_json = json.dumps(data)
+    #data_json = json.dumps(data, indent=4, separators=(',', ': '))
+    print data_json
+    r = requests.put(url, data=data_json)
+    print r
 
-def process_line(feedbacks, line):
+def process_line(key, feedbacks, line):
     m = re.search('GET (.*) HTTP', line)
     if not m:
         return
@@ -117,10 +126,10 @@ def process_line(feedbacks, line):
         return
     docs[rank]['clicked'] = True
 
-    report_feedback(feedback)
+    report_feedback(key, feedback)
 
 
-def process_log_file(date, log_file_path):
+def process_log_file(key, date, log_file_path):
     print log_file_path
 
     f = subprocess.Popen(['tail', '-F', '-n', '+0', log_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -133,12 +142,12 @@ def process_log_file(date, log_file_path):
         if not p.poll(timeout) and date != datetime.date.today():
             break
         line = f.stdout.readline()
-        process_line(feedbacks, line)
+        process_line(key, feedbacks, line)
 
     f.kill()
 
 
-def process(logdir, date):
+def process(key, logdir, date):
     print 'Processing', date.isoformat()
 
     log_file_path = logdir + 'localhost_access_log.' + date.isoformat() + '.txt'
@@ -146,31 +155,28 @@ def process(logdir, date):
         print log_file_path, 'does not exist'
         return False
 
-    process_log_file(date, log_file_path)
+    process_log_file(key, date, log_file_path)
     return True
 
 
 def main():
     parser = argparse.ArgumentParser(description='"Parse CiteSeerX access log and report user clicks to TREC OpenSearch')
     parser.add_argument('-s', '--date', type=str, help='Start from date in format YYYY-MM-DD, default to today')
-    parser.add_argument('-k', '--key', type=str, help='Provide a user key')
-    parser.add_argument('-p', '--port', help='Port number of OpenSearch API server')
-    parser.add_argument('-d', '--logdir', required=True, help='Tomcat logs directory')
+    parser.add_argument('-k', '--key', type=str, required=True, help='Provide a user key')
+    parser.add_argument('-d', '--logdir', type=str, required=True, help='Tomcat logs directory')
 
     args = parser.parse_args()
     if args.date:
         date = datetime.datetime.strptime(args.date, '%Y-%m-%d').date()
     else:
         date = datetime.date.today()
-    KEY = args.key
-    #port = int(args.port)
 
     if not os.path.exists(args.logdir):
         print args.logdir, 'does not exist'
         return
 
     while date <= datetime.date.today():
-        if not process(args.logdir, date) and date == datetime.date.today():
+        if not process(args.key, args.logdir, date) and date == datetime.date.today():
             time.sleep(10 * 60)
             continue
         date += datetime.timedelta(1)

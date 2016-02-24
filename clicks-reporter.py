@@ -10,6 +10,7 @@ import random
 import re
 import select
 import subprocess
+import time
 import sys
 import urllib
 import urllib2
@@ -143,9 +144,10 @@ def process(logdir, date):
     log_file_path = logdir + 'localhost_access_log.' + date.isoformat() + '.txt'
     if not os.path.exists(log_file_path):
         print log_file_path, 'does not exist'
-        return
+        return False
 
     process_log_file(date, log_file_path)
+    return True
 
 
 def main():
@@ -168,7 +170,9 @@ def main():
         return
 
     while date <= datetime.date.today():
-        process(args.logdir, date)
+        if not process(args.logdir, date) and date == datetime.date.today():
+            time.sleep(10 * 60)
+            continue
         date += datetime.timedelta(1)
 
 if __name__ == "__main__":

@@ -177,7 +177,7 @@ def main():
 
     while date <= datetime.date.today():
         if not process(args.key, args.logdir, date) and date == datetime.date.today():
-            time.sleep(10 * 60)
+            time.sleep(60)
             continue
         date += datetime.timedelta(1)
 

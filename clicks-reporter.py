@@ -65,8 +65,16 @@ def report_feedback(key, feedback):
     data_json = json.dumps(data)
     #data_json = json.dumps(data, indent=4, separators=(',', ': '))
     print data_json
-    r = requests.put(url, data=data_json)
-    print r
+    while True:
+        try:
+            r = requests.put(url, data=data_json)
+            print r
+        except requests.exceptions.ConnectionError as e:
+            print e
+            print 'sleep then retry...'
+            time.sleep(60)
+            continue
+        break
 
 def process_line(key, feedbacks, line):
     m = re.search('GET (.*) HTTP', line)

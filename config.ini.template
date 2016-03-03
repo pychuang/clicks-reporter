@@ -1,0 +1,6 @@
+[opensearch]
+url: http://localhost:5000
+key: E0016261DE4C0D61-M6C4AMHHE4WV4OVY
+
+[tomcat]
+log-dir: /usr/local/tomcat-solr/logs/

@@ -2,6 +2,7 @@
 
 import argparse
 import collections
+import ConfigParser
 import datetime
 import hashlib
 import json
@@ -18,7 +19,8 @@ import urllib2
 import urlparse
 import web
 
-OPENSEARCH_URL='http://localhost:5000'
+
+opensearch_url = ''
 
 urls = (
   '/select', 'select'
@@ -60,7 +62,7 @@ def report_feedback(key, feedback):
     sid = feedback['sid']
     data = convert_feedback_format(feedback)
     # PUT /api/site/feedback/(key)/(sid)
-    url = '/'.join([OPENSEARCH_URL, 'api/site/feedback', key, sid])
+    url = '/'.join([opensearch_url, 'api/site/feedback', key, sid])
     print "URL: %s" % url
     data_json = json.dumps(data)
     #data_json = json.dumps(data, indent=4, separators=(',', ': '))
@@ -168,10 +170,14 @@ def process(key, logdir, date):
 
 
 def main():
+    config = ConfigParser.ConfigParser()
+    config.read('config.ini')
+    opensearch_url = config.get('opensearch', 'url')
+    opensearch_key = config.get('opensearch', 'key')
+    logdir = config.get('tomcat', 'log-dir')
+
     parser = argparse.ArgumentParser(description='"Parse CiteSeerX access log and report user clicks to TREC OpenSearch')
     parser.add_argument('-s', '--date', type=str, help='Start from date in format YYYY-MM-DD, default to today')
-    parser.add_argument('-k', '--key', type=str, required=True, help='Provide a user key')
-    parser.add_argument('-d', '--logdir', type=str, required=True, help='Tomcat logs directory')
 
     args = parser.parse_args()
     if args.date:
@@ -179,12 +185,12 @@ def main():
     else:
         date = datetime.date.today()
 
-    if not os.path.exists(args.logdir):
-        print args.logdir, 'does not exist'
+    if not os.path.exists(logdir):
+        print logdir, 'does not exist'
         return
 
     while date <= datetime.date.today():
-        if not process(args.key, args.logdir, date) and date == datetime.date.today():
+        if not process(opensearch_key, logdir, date) and date == datetime.date.today():
             time.sleep(60)
             continue
         date += datetime.timedelta(1)

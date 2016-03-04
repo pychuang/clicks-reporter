@@ -67,14 +67,21 @@ def report_feedback(key, feedback):
     data_json = json.dumps(data)
     #data_json = json.dumps(data, indent=4, separators=(',', ': '))
     print data_json
+    retry_sleep_time = 0
     while True:
         try:
             r = requests.put(url, data=data_json)
             print r
         except requests.exceptions.ConnectionError as e:
-            print e
-            print 'sleep then retry...'
-            time.sleep(60)
+            if retry_sleep_time == 0:
+                retry_sleep_time =  1
+                print e
+                print 'Retry...',
+            elif retry_sleep_time <= 32:
+                retry_sleep_time *= 2
+                print '.',
+
+            time.sleep(retry_sleep_time * 60)
             continue
         break
 

@@ -74,10 +74,12 @@ def report_feedback(opensearch_url, key, feedback):
             if retry_sleep_time == 0:
                 retry_sleep_time =  1
                 print e
-                print 'Retry...',
+                sys.stdout.write('Retry...')
+                sys.stdout.flush()
             elif retry_sleep_time <= 32:
                 retry_sleep_time *= 2
-                print '.',
+                sys.stdout.write('.')
+                sys.stdout.flush()
 
             time.sleep(retry_sleep_time * 60)
             continue

@@ -20,8 +20,6 @@ import urlparse
 import web
 
 
-opensearch_url = ''
-
 urls = (
   '/select', 'select'
 )
@@ -58,7 +56,7 @@ def convert_feedback_format(feedback):
         doclist.append(d)
     return os_feedback
 
-def report_feedback(key, feedback):
+def report_feedback(opensearch_url, key, feedback):
     sid = feedback['sid']
     data = convert_feedback_format(feedback)
     # PUT /api/site/feedback/(key)/(sid)
@@ -85,7 +83,7 @@ def report_feedback(key, feedback):
             continue
         break
 
-def process_line(key, feedbacks, line):
+def process_line(opensearch_url, key, feedbacks, line):
     m = re.search('GET (.*) HTTP', line)
     if not m:
         return
@@ -143,10 +141,10 @@ def process_line(key, feedbacks, line):
         return
     docs[rank]['clicked'] = True
 
-    report_feedback(key, feedback)
+    report_feedback(opensearch_url, key, feedback)
 
 
-def process_log_file(key, date, log_file_path):
+def process_log_file(opensearch_url, key, date, log_file_path):
     print log_file_path
 
     f = subprocess.Popen(['tail', '-F', '-n', '+0', log_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -159,12 +157,12 @@ def process_log_file(key, date, log_file_path):
         if not p.poll(timeout) and date != datetime.date.today():
             break
         line = f.stdout.readline()
-        process_line(key, feedbacks, line)
+        process_line(opensearch_url, key, feedbacks, line)
 
     f.kill()
 
 
-def process(key, logdir, date):
+def process(opensearch_url, key, logdir, date):
     print 'Processing', date.isoformat()
 
     log_file_path = logdir + 'localhost_access_log.' + date.isoformat() + '.txt'
@@ -172,7 +170,7 @@ def process(key, logdir, date):
         print log_file_path, 'does not exist'
         return False
 
-    process_log_file(key, date, log_file_path)
+    process_log_file(opensearch_url, key, date, log_file_path)
     return True
 
 
@@ -197,7 +195,7 @@ def main():
         return
 
     while date <= datetime.date.today():
-        if not process(opensearch_key, logdir, date) and date == datetime.date.today():
+        if not process(opensearch_url, opensearch_key, logdir, date) and date == datetime.date.today():
             time.sleep(60)
             continue
         date += datetime.timedelta(1)

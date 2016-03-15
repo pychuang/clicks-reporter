@@ -156,10 +156,11 @@ def process_log_file(opensearch_url, key, date, log_file_path):
 
     feedbacks = {}
     while True:
-        if not p.poll(timeout) and date != datetime.date.today():
+        if p.poll(timeout):
+            line = f.stdout.readline()
+            process_line(opensearch_url, key, feedbacks, line)
+        elif date != datetime.date.today():
             break
-        line = f.stdout.readline()
-        process_line(opensearch_url, key, feedbacks, line)
 
     f.kill()
 

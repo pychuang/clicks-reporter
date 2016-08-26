@@ -71,6 +71,8 @@ def report_feedback(feedback):
         try:
             r = requests.put(url, data=data_json)
             print r
+            if r.status_code != 200:
+                print r.text
         except requests.exceptions.ConnectionError as e:
             if retry_sleep_time == 0:
                 retry_sleep_time =  1

@@ -142,6 +142,9 @@ def put_doc_to_opensearch(title, text, doi):
     try:
         r = requests.put(url, data=data_json)
         print r
+        if r.status_code != 200:
+            print r.text
+            return False
     except Exception as e:
         print e
         print "Failed put %s to OpenSearch" % doi
@@ -182,7 +185,6 @@ def upload_doc_if_necessary(doi):
     global doc_set
 
     if doi in doc_set:
-        print "%s already in OpenSearch" % doi
         return
 
     print "%s not in OpenSearch database, upload it" % doi

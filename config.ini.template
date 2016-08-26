@@ -2,5 +2,11 @@
 url: http://localhost:5000
 key: E0016261DE4C0D61-M6C4AMHHE4WV4OVY
 
+[repo]
+url: http://csxrepo01.ist.psu.edu/document
+
+[solr]
+url: http://csxindex03.ist.psu.edu:8080/solr/citeseerx/select
+
 [tomcat]
 log-dir: /usr/local/tomcat-solr/logs/

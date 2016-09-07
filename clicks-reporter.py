@@ -234,6 +234,8 @@ def process_line(feedbacks, line):
             continue
         (r, doi, t) = marker.split(':')
         ranking  = int(r)
+        if not doi:
+            return
         upload_doc_if_necessary(doi)
         if ranking not in docs:
             doc = {

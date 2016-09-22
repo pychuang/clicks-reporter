@@ -53,14 +53,6 @@ def convert_feedback_format(feedback):
     return os_feedback
 
 
-def report_feedback(feedback):
-    data = convert_feedback_format(feedback)
-    data_json = json.dumps(data)
-    #data_json = json.dumps(data, indent=4, separators=(',', ': '))
-    print data_json
-
-
-
 def process_line(feedbacks, line):
     m = re.search('GET (.*) HTTP', line)
     if not m:
@@ -121,7 +113,7 @@ def process_line(feedbacks, line):
         return
     docs[rank]['clicked'] = True
 
-    report_feedback(feedback)
+    return convert_feedback_format(feedback)
 
 
 def process_log_file(date, log_file_path):
@@ -133,14 +125,18 @@ def process_log_file(date, log_file_path):
     timeout = 1 * 1000
 
     feedbacks = {}
+    converted_feedbacks = []
     while True:
         if p.poll(timeout):
             line = f.stdout.readline()
-            process_line(feedbacks, line)
+            data = process_line(feedbacks, line)
+            if data:
+                converted_feedbacks.append(data)
         elif date != datetime.date.today():
             break
 
     f.kill()
+    return converted_feedbacks
 
 
 def process(date):
@@ -151,7 +147,13 @@ def process(date):
         print log_file_path, 'does not exist'
         return False
 
-    process_log_file(date, log_file_path)
+    feedbacks = process_log_file(date, log_file_path)
+    if feedbacks:
+        json_file_path = 'citeseerx.clicks' + date.isoformat() + '.json'
+        print "Write %d feedbacks to %s ..." % (len(feedbacks), json_file_path)
+        with open json_file_path as f:
+            json.dumps(feedbacks, f)
+
     return True
 
 

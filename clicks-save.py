@@ -151,8 +151,10 @@ def process(date):
     if feedbacks:
         json_file_path = 'citeseerx.clicks' + date.isoformat() + '.json'
         print "Write %d feedbacks to %s ..." % (len(feedbacks), json_file_path)
-        with open(json_file_path, 'w') as f:
-            json.dumps(feedbacks, f)
+        data = json.dumps(feedbacks)
+        f = open(json_file_path, 'w')
+        f.write(data)
+        f.close()
 
     return True
 
